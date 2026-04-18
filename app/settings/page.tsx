@@ -1,70 +1,134 @@
 'use client';
 
+import { useState } from 'react';
+import { RefreshCw, Database, BookOpen, AlertTriangle } from 'lucide-react';
 import { useSchedulingStore } from '@/lib/store';
-import { INITIAL_DISTRICTS, SAMPLE_PROVIDERS } from '@/lib/data';
-import { generateAllSlots } from '@/lib/slotGenerator';
-import { Trash2, RefreshCw } from 'lucide-react';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 export default function SettingsPage() {
-  const { providers, students, slots } = useSchedulingStore();
+  const { providers, students, slots, wellnessCircles, tasks, resetToSampleData } = useSchedulingStore();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleReset = () => {
-    if (confirm('This will clear ALL providers, students, and schedule data and reset to sample data. Are you sure?')) {
-      // Clear localStorage and reload
-      localStorage.removeItem('hellohero-scheduling');
-      window.location.reload();
-    }
-  };
-
-  const handleClearStudents = () => {
-    if (confirm('Remove all students? This cannot be undone.')) {
-      localStorage.removeItem('hellohero-scheduling');
-      // Partial reset — keep providers
-      window.location.reload();
-    }
+    localStorage.removeItem('schedulehero-v1');
+    resetToSampleData();
+    setShowResetConfirm(false);
   };
 
   return (
-    <div className="p-6 max-w-xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
-      <p className="text-sm text-gray-500 mb-8">System configuration and data management</p>
+    <>
+      <div style={{ padding: '28px 32px', maxWidth: 680, margin: '0 auto' }}>
+        <div style={{ marginBottom: 28 }}>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Data management and system information.</p>
+        </div>
 
-      <div className="space-y-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-1">System Summary</h2>
-          <div className="text-sm text-gray-600 space-y-1 mt-3">
-            <div className="flex justify-between"><span>Active providers</span><span className="font-medium">{providers.filter(p => p.active).length}</span></div>
-            <div className="flex justify-between"><span>Total students</span><span className="font-medium">{students.length}</span></div>
-            <div className="flex justify-between"><span>Total slots generated</span><span className="font-medium">{slots.length}</span></div>
-            <div className="flex justify-between"><span>Filled slots</span><span className="font-medium">{slots.filter(s => s.status === 'filled').length}</span></div>
+        {/* System summary */}
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <Database size={15} color="#1A2744" />
+            <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+              System Summary
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[
+              { label: 'Active providers', value: providers.filter(p => p.active).length },
+              { label: 'Total students', value: students.length },
+              { label: 'Scheduled students', value: students.filter(s => s.status === 'Scheduled').length },
+              { label: 'Students in queue', value: students.filter(s => s.status === 'Needs Scheduling').length },
+              { label: 'Cancelled / Ended students', value: students.filter(s => s.status === 'Cancelled' || s.status === 'Ended').length },
+              { label: 'Total time slots generated', value: slots.length },
+              { label: 'Filled slots', value: slots.filter(s => s.status === 'filled').length },
+              { label: 'Active Wellness Circles', value: wellnessCircles.filter(wc => wc.isActive).length },
+              { label: 'Open tasks', value: tasks.filter(t => !t.isComplete).length },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0', borderBottom: '1px solid #F1F5F9',
+              }}>
+                <span style={{ fontSize: 13, color: '#475569' }}>{stat.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Geist Mono', monospace", color: '#0F172A' }}>
+                  {stat.value}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="bg-white border border-red-200 rounded-xl p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-1">Data Management</h2>
-          <p className="text-xs text-gray-500 mb-4">These actions cannot be undone. Use with care.</p>
-          <div className="space-y-3">
-            <button
-              onClick={handleReset}
-              className="w-full flex items-center justify-center gap-2 border border-red-300 text-red-600 rounded-lg py-2 text-sm font-medium hover:bg-red-50 transition-colors"
-            >
-              <RefreshCw size={15} />
-              Reset All Data (back to sample)
-            </button>
+        {/* User guide */}
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <BookOpen size={15} color="#7C3AED" />
+            <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+              User Guide
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.5, marginBottom: 12 }}>
+            A full walkthrough guide (GUIDE.md) is included in the project folder. It covers every feature in plain language and is safe to share with your team.
+          </p>
+          <div style={{ background: '#F8F9FC', borderRadius: 8, padding: '10px 12px', fontFamily: "'Geist Mono', monospace", fontSize: 12, color: '#64748B' }}>
+            ~/Desktop/dev/hellohero-scheduling/GUIDE.md
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-900 mb-1">Coming Soon</h2>
-          <ul className="text-sm text-gray-400 space-y-1.5 mt-3 list-disc list-inside">
-            <li>Google Calendar sync</li>
-            <li>Google Sheets import (students ready to schedule)</li>
-            <li>User login & access control</li>
-            <li>Session attendance tracking</li>
-            <li>Export schedule to PDF</li>
-          </ul>
+        {/* Roadmap */}
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>
+            Coming in Future Phases
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[
+              'Email generation — templates for families and schools',
+              'Supabase / cloud database (shared across team)',
+              'Google Calendar sync',
+              'Session attendance tracking',
+              'PDF schedule export',
+              'User login and access control',
+            ].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
+                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#CBD5E1', flexShrink: 0 }} />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Data management */}
+        <div className="card" style={{ padding: '18px 20px', border: '1px solid #FECACA' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <AlertTriangle size={15} color="#DC2626" />
+            <span style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontSize: 14, fontWeight: 700, color: '#DC2626' }}>
+              Data Management
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.5, marginBottom: 14 }}>
+            This will delete all current data and restore the built-in sample dataset. Use this to reset to a clean demo state.
+          </p>
+          <button
+            className="btn btn-danger"
+            onClick={() => setShowResetConfirm(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <RefreshCw size={13} /> Reset to Sample Data
+          </button>
+        </div>
+
+        <div style={{ marginTop: 24, textAlign: 'center', fontSize: 11, color: '#94A3B8' }}>
+          ScheduleHero v1.0 · HelloHero · Data stored locally in your browser
         </div>
       </div>
-    </div>
+
+      {showResetConfirm && (
+        <ConfirmModal
+          title="Reset All Data"
+          message="This will permanently delete all providers, students, and schedule data, and restore the built-in sample dataset. This cannot be undone."
+          confirmLabel="Reset to Sample Data"
+          variant="danger"
+          onCancel={() => setShowResetConfirm(false)}
+          onConfirm={handleReset}
+        />
+      )}
+    </>
   );
 }

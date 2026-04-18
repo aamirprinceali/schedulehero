@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Student, SessionType, StudentStatus } from '@/lib/types';
+import { Student } from '@/lib/types';
 import { useSchedulingStore } from '@/lib/store';
-
-const SESSION_TYPES: SessionType[] = ['1:1', 'WC', 'Assessment'];
 
 interface Props {
   existing?: Student;
@@ -12,151 +10,107 @@ interface Props {
 }
 
 export default function StudentForm({ existing, onClose }: Props) {
-  const { districts, addStudent, updateStudent } = useSchedulingStore();
-  const allSchools = districts.flatMap(d => d.schools);
+  const { districts, addStudentToQueue, updateStudentInfo } = useSchedulingStore();
 
   const [name, setName] = useState(existing?.name ?? '');
   const [dob, setDob] = useState(existing?.dob ?? '');
   const [districtId, setDistrictId] = useState(existing?.districtId ?? '');
   const [school, setSchool] = useState(existing?.school ?? '');
-  const [sessionType, setSessionType] = useState<SessionType>(existing?.sessionType ?? '1:1');
+  const [parentName, setParentName] = useState(existing?.parentName ?? '');
+  const [parentEmail, setParentEmail] = useState(existing?.parentEmail ?? '');
+  const [parentPhone, setParentPhone] = useState(existing?.parentPhone ?? '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
-  const [addedBy, setAddedBy] = useState(existing?.addedBy ?? '');
 
-  // Schools for selected district — used for datalist suggestions
   const selectedDistrict = districts.find(d => d.id === districtId);
-  const districtSchools = selectedDistrict?.schools ?? allSchools;
-
-  const schoolListId = 'student-school-list';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Only name, district, session type, and school are required
     if (!name.trim() || !districtId || !school) return;
 
-    const studentData = {
-      name: name.trim(),
-      dob: dob || undefined,
-      districtId,
-      school,
-      sessionType,
-      status: (existing?.status ?? 'Needs Scheduling') as StudentStatus,
-      notes,
-      addedBy: addedBy || 'Staff',
-      providerId: existing?.providerId,
-      day: existing?.day,
-      slotId: existing?.slotId,
-    };
-
     if (existing) {
-      updateStudent(existing.id, studentData);
+      updateStudentInfo(existing.id, {
+        name: name.trim(),
+        dob: dob || undefined,
+        districtId,
+        school,
+        parentName: parentName || undefined,
+        parentEmail: parentEmail || undefined,
+        parentPhone: parentPhone || undefined,
+        notes: notes || undefined,
+      });
     } else {
-      addStudent(studentData);
+      addStudentToQueue({
+        name: name.trim(),
+        dob: dob || undefined,
+        districtId,
+        school,
+        parentName: parentName || undefined,
+        parentEmail: parentEmail || undefined,
+        parentPhone: parentPhone || undefined,
+        notes: notes || undefined,
+      });
     }
     onClose();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Name */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
-        <input
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Full name"
-          required
-        />
-      </div>
-
-      {/* District + School */}
-      <div className="grid grid-cols-2 gap-3">
+    <form onSubmit={handleSubmit}>
+      <div style={{ display: 'grid', gap: 12, padding: '18px 22px' }}>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">District *</label>
-          <select
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-            value={districtId}
-            onChange={e => { setDistrictId(e.target.value); setSchool(''); }}
-            required
-          >
-            <option value="">— Select district —</option>
-            {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+            Student Name <span style={{ color: '#EF4444' }}>*</span>
+          </label>
+          <input className="input" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} required />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">School *</label>
-          {/* datalist allows free-typing a school not yet in the system */}
-          <input
-            list={schoolListId}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-            value={school}
-            onChange={e => setSchool(e.target.value)}
-            placeholder="Type or select school"
-            required
-          />
-          <datalist id={schoolListId}>
-            {districtSchools.map(s => <option key={s} value={s} />)}
-          </datalist>
-        </div>
-      </div>
 
-      {/* Session Type */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Session Type *</label>
-        <select
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-          value={sessionType}
-          onChange={e => setSessionType(e.target.value as SessionType)}
-        >
-          {SESSION_TYPES.map(st => (
-            <option key={st} value={st}>
-              {st === '1:1' ? '1:1 (Individual)' : st === 'WC' ? 'Wellness Circle' : 'Assessment'}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Optional fields */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth <span className="text-gray-400 font-normal">(optional)</span></label>
-          <input
-            type="date"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-            value={dob}
-            onChange={e => setDob(e.target.value)}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+              District <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <select className="input" value={districtId} onChange={e => { setDistrictId(e.target.value); setSchool(''); }} required>
+              <option value="">Select district…</option>
+              {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+              School <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <select className="input" value={school} onChange={e => setSchool(e.target.value)} required disabled={!selectedDistrict}>
+              <option value="">Select school…</option>
+              {selectedDistrict?.schools.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Added By <span className="text-gray-400 font-normal">(optional)</span></label>
-          <input
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
-            value={addedBy}
-            onChange={e => setAddedBy(e.target.value)}
-            placeholder="Scheduler name"
-          />
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>Date of Birth (optional)</label>
+          <input type="date" className="input" value={dob} onChange={e => setDob(e.target.value)} />
+        </div>
+
+        <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+            Parent / Guardian (optional)
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <input className="input" placeholder="Parent name" value={parentName} onChange={e => setParentName(e.target.value)} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <input className="input" type="email" placeholder="Email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} />
+              <input className="input" type="tel" placeholder="Phone" value={parentPhone} onChange={e => setParentPhone(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>Notes</label>
+          <textarea className="input" rows={2} placeholder="Optional notes…" value={notes} onChange={e => setNotes(e.target.value)} style={{ resize: 'vertical' }} />
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
-        <textarea
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4ECDC4] resize-none"
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          rows={2}
-          placeholder="Optional notes"
-        />
-      </div>
-
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onClose} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 transition-colors">
-          Cancel
-        </button>
-        <button type="submit" className="flex-1 bg-[#FF6B35] text-white rounded-lg py-2 text-sm font-medium hover:bg-[#e55a24] transition-colors">
-          {existing ? 'Save Changes' : 'Add Student'}
-        </button>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 22px 18px', borderTop: '1px solid #F1F5F9' }}>
+        <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
+        <button type="submit" className="btn btn-primary">{existing ? 'Save Changes' : 'Add Student'}</button>
       </div>
     </form>
   );
